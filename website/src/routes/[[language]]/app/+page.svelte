@@ -115,8 +115,17 @@
     </h2>
 </div>
 
-{#if $syncError}<div role="alert" class="fixed top-12 left-2 right-2 z-[100] bg-red-100 text-red-900 p-2 rounded">{$syncError}</div>{/if}
-{#if $syncBusy}<div class="fixed inset-0 z-[99] cursor-wait" aria-label="Synchronisation" aria-busy="true"></div>{/if}
+{#if $syncError}<div
+        role="alert"
+        class="fixed top-12 left-2 right-2 z-[100] bg-red-100 text-red-900 p-2 rounded"
+    >
+        {$syncError}
+    </div>{/if}
+{#if $syncBusy}<div
+        class="fixed inset-0 z-[99] cursor-wait"
+        aria-label="Synchronisation"
+        aria-busy="true"
+    ></div>{/if}
 <div class="fixed flex flex-row w-dvw h-dvh">
     <div class="flex flex-col grow h-full min-w-0">
         <div class="grow relative">

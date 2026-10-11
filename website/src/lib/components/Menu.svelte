@@ -542,7 +542,6 @@
                     {i18n._('menu.help')}
                 </span>
             </Button>
-
         </div>
     </div>
 </div>

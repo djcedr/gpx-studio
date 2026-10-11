@@ -108,7 +108,9 @@ export class FileActionManager {
             const patchIndex = get(this._patchIndex);
             this._db.patches.get(patchIndex).then((patch) => {
                 if (patch) {
-                    this.apply(patch.inversePatch).then(saved => { if (saved) this._db.settings.put(patchIndex - 1, 'patchIndex'); });
+                    this.apply(patch.inversePatch).then((saved) => {
+                        if (saved) this._db.settings.put(patchIndex - 1, 'patchIndex');
+                    });
                 }
             });
         }
@@ -119,7 +121,9 @@ export class FileActionManager {
             const patchIndex = get(this._patchIndex) + 1;
             this._db.patches.get(patchIndex).then((patch) => {
                 if (patch) {
-                    this.apply(patch.patch).then(saved => { if (saved) this._db.settings.put(patchIndex, 'patchIndex'); });
+                    this.apply(patch.patch).then((saved) => {
+                        if (saved) this._db.settings.put(patchIndex, 'patchIndex');
+                    });
                 }
             });
         }
@@ -148,28 +152,38 @@ export class FileActionManager {
             .filter((file) => file !== undefined) as GPXFile[];
         updatedFileIds = updatedFiles.map((file) => file._data.id);
 
-
         // @ts-ignore
-        const expected = new Map(Array.from(this._files, ([id, file]) => [id, (file._data as any).serverVersion as number]));
+        const expected = new Map(
+            Array.from(this._files, ([id, file]) => [
+                id,
+                (file._data as any).serverVersion as number,
+            ])
+        );
         return saveServer(updatedFiles, deletedFileIds, expected, async (versions) => {
-        selection.updateFiles(updatedFiles, deletedFileIds);
-        await this._db.transaction('rw', this._db.fileids, this._db.files, async () => {
-            if (updatedFileIds.length > 0) {
-                await this._db.fileids.bulkPut(updatedFileIds, updatedFileIds);
-                await this._db.files.bulkPut(updatedFiles.map(file => ({ ...file, _data: { ...file._data, serverVersion: versions.get(file._data.id) } })) as unknown as GPXFile[], updatedFileIds);
-            }
-            if (deletedFileIds.length > 0) {
-                await this._db.fileids.bulkDelete(deletedFileIds);
-                await this._db.files.bulkDelete(deletedFileIds);
-            }
-        });
+            selection.updateFiles(updatedFiles, deletedFileIds);
+            await this._db.transaction('rw', this._db.fileids, this._db.files, async () => {
+                if (updatedFileIds.length > 0) {
+                    await this._db.fileids.bulkPut(updatedFileIds, updatedFileIds);
+                    await this._db.files.bulkPut(
+                        updatedFiles.map((file) => ({
+                            ...file,
+                            _data: { ...file._data, serverVersion: versions.get(file._data.id) },
+                        })) as unknown as GPXFile[],
+                        updatedFileIds
+                    );
+                }
+                if (deletedFileIds.length > 0) {
+                    await this._db.fileids.bulkDelete(deletedFileIds);
+                    await this._db.files.bulkDelete(deletedFileIds);
+                }
+            });
         });
     }
 
     applyGlobal(callback: (files: Map<string, GPXFile>) => void) {
         const [newFileCollection, patch, inversePatch] = produceWithPatches(this._files, callback);
 
-        return this.commitFileStateChange(newFileCollection, patch).then(saved => {
+        return this.commitFileStateChange(newFileCollection, patch).then((saved) => {
             if (saved) return this.storePatches(patch, inversePatch);
         });
     }
@@ -187,7 +201,7 @@ export class FileActionManager {
             }
         );
 
-        return this.commitFileStateChange(newFileCollection, patch).then(saved => {
+        return this.commitFileStateChange(newFileCollection, patch).then((saved) => {
             if (saved) return this.storePatches(patch, inversePatch);
         });
     }
@@ -215,7 +229,7 @@ export class FileActionManager {
             }
         );
 
-        return this.commitFileStateChange(newFileCollection, patch).then(saved => {
+        return this.commitFileStateChange(newFileCollection, patch).then((saved) => {
             if (saved) return this.storePatches(patch, inversePatch);
         });
     }

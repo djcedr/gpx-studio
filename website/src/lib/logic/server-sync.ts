@@ -8,20 +8,30 @@ const tombstones = new Map<string, number>();
 let refreshing = false;
 let initialized = false;
 
-async function snapshot() {
-    const response = await fetch('/api/gpx', { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+async function snapshot(force = false) {
+    const response = await fetch('/api/gpx', {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(15000),
+    });
     if (!response.ok) throw new Error('Serveur indisponible.');
     const { files } = await response.json();
-    const changed = !initialized || files.length !== versions.size || files.some((f: any) => versions.get(f.id) !== f.version);
+    const changed =
+        force ||
+        !initialized ||
+        files.length !== versions.size ||
+        files.some((f: any) => versions.get(f.id) !== f.version);
     if (!changed) return;
     // Dexie key-path inference recurses through GPXTreeNode.children.
     // @ts-ignore
     await db.transaction('rw', db.files, db.fileids, db.patches, db.settings, async () => {
-        await db.files.clear(); await db.fileids.clear(); await db.patches.clear();
+        await db.files.clear();
+        await db.fileids.clear();
+        await db.patches.clear();
         await db.settings.put(-1, 'patchIndex');
         for (const item of files) {
             item.file._data = { ...item.file._data, serverVersion: item.version };
-            await db.files.put(item.file, item.id); await db.fileids.put(item.id, item.id);
+            await db.files.put(item.file, item.id);
+            await db.fileids.put(item.id, item.id);
         }
     });
     versions = new Map(files.map((f: any) => [f.id, f.version]));
@@ -31,35 +41,86 @@ export async function refreshServer() {
     if (get(syncBusy) || refreshing) return;
     refreshing = true;
     syncBusy.set(true);
-    try { await snapshot(); syncError.set(''); }
-    catch { syncError.set('Serveur indisponible. Réessai automatique.'); }
-    finally { refreshing = false; syncBusy.set(false); }
+    try {
+        await snapshot();
+        syncError.set('');
+    } catch {
+        syncError.set('Serveur indisponible. Réessai automatique.');
+    } finally {
+        refreshing = false;
+        syncBusy.set(false);
+    }
 }
-export async function saveServer(files: GPXFile[], deleted: string[], expected: Map<string, number>, commit: (versions: Map<string, number>) => Promise<unknown>) {
-    if (get(syncBusy) || !initialized) { syncError.set('Synchronisation en cours. Réessayez.'); return false; }
+export async function saveServer(
+    files: GPXFile[],
+    deleted: string[],
+    expected: Map<string, number>,
+    commit: (versions: Map<string, number>) => Promise<unknown>
+) {
+    if (get(syncBusy) || !initialized) {
+        syncError.set('Synchronisation en cours. Réessayez.');
+        return false;
+    }
     syncBusy.set(true);
     try {
-        const changes = [...files.map(file => ({ id: file._data.id, version: expected.get(file._data.id) ?? tombstones.get(file._data.id) ?? null, file })),
-            ...deleted.map(id => ({ id, version: expected.get(id) ?? null, file: null }))];
+        const changes = [
+            ...files.map((file) => ({
+                id: file._data.id,
+                version: expected.get(file._data.id) ?? tombstones.get(file._data.id) ?? null,
+                file,
+            })),
+            ...deleted.map((id) => ({ id, version: expected.get(id) ?? null, file: null })),
+        ];
         if (!changes.length) return true;
-        const response = await fetch('/api/gpx', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ changes }), signal: AbortSignal.timeout(30000) });
-        if (!response.ok) throw new Error(response.status === 409 ? 'Trace modifiée ailleurs. Réessayez votre modification.' : 'Enregistrement impossible. Réessayez.');
+        const response = await fetch('/api/gpx', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ changes }),
+            signal: AbortSignal.timeout(30000),
+        });
+        if (!response.ok)
+            throw new Error(
+                response.status === 409
+                    ? 'Trace modifiée ailleurs. Réessayez votre modification.'
+                    : 'Enregistrement impossible. Réessayez.'
+            );
         const result = await response.json();
         for (const item of result.files) {
-            if (item.deleted) { versions.delete(item.id); tombstones.set(item.id, item.version); }
-            else { versions.set(item.id, item.version); tombstones.delete(item.id); }
+            if (item.deleted) {
+                versions.delete(item.id);
+                tombstones.set(item.id, item.version);
+            } else {
+                versions.set(item.id, item.version);
+                tombstones.delete(item.id);
+            }
         }
-        await commit(versions); syncError.set(''); return true;
+        await commit(versions);
+        syncError.set('');
+        return true;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Enregistrement impossible.';
-        try { await snapshot(); } catch { initialized = false; }
-        syncError.set(message); return false;
-    } finally { syncBusy.set(false); }
+        try {
+            await snapshot(true);
+        } catch {
+            initialized = false;
+        }
+        syncError.set(message);
+        return false;
+    } finally {
+        syncBusy.set(false);
+    }
 }
 export function startServerSync() {
     const interval = setInterval(refreshServer, 3000);
-    const unload = (event: BeforeUnloadEvent) => { if (get(syncBusy)) { event.preventDefault(); event.returnValue = ''; } };
+    const unload = (event: BeforeUnloadEvent) => {
+        if (get(syncBusy)) {
+            event.preventDefault();
+            event.returnValue = '';
+        }
+    };
     window.addEventListener('beforeunload', unload);
-    return () => { clearInterval(interval); window.removeEventListener('beforeunload', unload); };
+    return () => {
+        clearInterval(interval);
+        window.removeEventListener('beforeunload', unload);
+    };
 }

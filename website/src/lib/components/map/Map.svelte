@@ -29,7 +29,17 @@
             webgl2Supported = false;
             return;
         }
-        if (window.top !== window.self && !page.route.id?.includes('embed') && (() => { try { return window.top?.location.origin !== location.origin; } catch { return true; } })()) {
+        if (
+            window.top !== window.self &&
+            !page.route.id?.includes('embed') &&
+            (() => {
+                try {
+                    return window.top?.location.origin !== location.origin;
+                } catch {
+                    return true;
+                }
+            })()
+        ) {
             embeddedApp = true;
             return;
         }
