@@ -14,7 +14,13 @@ async function snapshot(force = false) {
         signal: AbortSignal.timeout(15000),
     });
     if (!response.ok) throw new Error('Serveur indisponible.');
-    const { files } = await response.json();
+    // JSON transport turns GPX Date fields into strings; the editor expects Dates.
+    const { files } = JSON.parse(await response.text(), (key, value) => {
+        if (key !== 'time') return value;
+        if (typeof value !== 'string') return undefined;
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? undefined : date;
+    });
     const changed =
         force ||
         !initialized ||
