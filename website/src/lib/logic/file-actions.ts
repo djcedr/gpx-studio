@@ -35,14 +35,7 @@ import { boundsManager } from './bounds';
 
 // Generate unique file ids, different from the ones in the database
 export function getFileIds(n: number) {
-    let ids = [];
-    for (let index = 0; ids.length < n; index++) {
-        let id = `gpx-${index}`;
-        if (!fileStateCollection.getFile(id)) {
-            ids.push(id);
-        }
-    }
-    return ids;
+    return Array.from({ length: n }, () => `gpx-${crypto.randomUUID()}`);
 }
 
 export function newGPXFile() {

@@ -229,7 +229,7 @@ export const settings = {
         'celsius',
         getValueValidator<TemperatureUnits>(['celsius', 'fahrenheit'], 'celsius')
     ),
-    elevationProfile: new Setting<boolean>('elevationProfile', true),
+    elevationProfile: new Setting<boolean>('elevationProfile', false),
     additionalDatasets: new Setting<AdditionalDataset[]>(
         'additionalDatasets',
         [],
@@ -245,7 +245,7 @@ export const settings = {
     routing: new Setting('routing', true),
     routingProfile: new Setting<RoutingProfile>(
         'routingProfile',
-        'bike',
+        'foot',
         getValueValidator<RoutingProfile>(
             [
                 'bike',
@@ -257,7 +257,7 @@ export const settings = {
                 'water',
                 'railway',
             ],
-            'bike'
+            'foot'
         )
     ),
     privateRoads: new Setting('privateRoads', false),

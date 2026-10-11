@@ -16,14 +16,16 @@ const config = {
             pages: 'build',
             assets: 'build',
             precompress: false,
-            strict: true,
+            strict: false,
         }),
         paths: {
-            base: process.argv.includes('dev') ? '' : process.env.BASE_PATH,
+            base: process.env.BASE_PATH ?? '/studio',
             relative: false,
         },
         prerender: {
-            crawl: true,
+            crawl: false,
+            entries: ['/fr/app'],
+            handleUnseenRoutes: 'ignore',
         },
     },
 };

@@ -108,7 +108,7 @@ export class Selection {
         const unsubscribe = fileStateCollection.subscribe((files) => {
             if (files.has(fileId)) {
                 this.selectFile(fileId);
-                unsubscribe();
+                queueMicrotask(() => unsubscribe());
             }
         });
     }

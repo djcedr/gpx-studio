@@ -1,4 +1,5 @@
 import Dexie from 'dexie';
+import { IDBFactory, IDBKeyRange } from 'fake-indexeddb';
 import type { GPXFile } from 'gpx';
 import { enableMapSet, enablePatches, type Patch } from 'immer';
 
@@ -22,6 +23,8 @@ export class Database extends Dexie {
     constructor() {
         super('Database', {
             cache: 'immutable',
+            indexedDB: new IDBFactory(),
+            IDBKeyRange,
         });
         this.version(1).stores({
             fileids: ',&fileid',

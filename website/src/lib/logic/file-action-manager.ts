@@ -13,6 +13,7 @@ import {
 } from 'svelte/store';
 import { selection } from '$lib/logic/selection';
 
+import { saveServer } from './server-sync';
 const MAX_PATCHES = 100;
 
 export class FileActionManager {
@@ -107,8 +108,7 @@ export class FileActionManager {
             const patchIndex = get(this._patchIndex);
             this._db.patches.get(patchIndex).then((patch) => {
                 if (patch) {
-                    this.apply(patch.inversePatch);
-                    this._db.settings.put(patchIndex - 1, 'patchIndex');
+                    this.apply(patch.inversePatch).then(saved => { if (saved) this._db.settings.put(patchIndex - 1, 'patchIndex'); });
                 }
             });
         }
@@ -119,8 +119,7 @@ export class FileActionManager {
             const patchIndex = get(this._patchIndex) + 1;
             this._db.patches.get(patchIndex).then((patch) => {
                 if (patch) {
-                    this.apply(patch.patch);
-                    this._db.settings.put(patchIndex, 'patchIndex');
+                    this.apply(patch.patch).then(saved => { if (saved) this._db.settings.put(patchIndex, 'patchIndex'); });
                 }
             });
         }
@@ -149,27 +148,30 @@ export class FileActionManager {
             .filter((file) => file !== undefined) as GPXFile[];
         updatedFileIds = updatedFiles.map((file) => file._data.id);
 
-        selection.updateFiles(updatedFiles, deletedFileIds);
 
         // @ts-ignore
-        return this._db.transaction('rw', this._db.fileids, this._db.files, async () => {
+        const expected = new Map(Array.from(this._files, ([id, file]) => [id, (file._data as any).serverVersion as number]));
+        return saveServer(updatedFiles, deletedFileIds, expected, async (versions) => {
+        selection.updateFiles(updatedFiles, deletedFileIds);
+        await this._db.transaction('rw', this._db.fileids, this._db.files, async () => {
             if (updatedFileIds.length > 0) {
                 await this._db.fileids.bulkPut(updatedFileIds, updatedFileIds);
-                await this._db.files.bulkPut(updatedFiles, updatedFileIds);
+                await this._db.files.bulkPut(updatedFiles.map(file => ({ ...file, _data: { ...file._data, serverVersion: versions.get(file._data.id) } })) as unknown as GPXFile[], updatedFileIds);
             }
             if (deletedFileIds.length > 0) {
                 await this._db.fileids.bulkDelete(deletedFileIds);
                 await this._db.files.bulkDelete(deletedFileIds);
             }
         });
+        });
     }
 
     applyGlobal(callback: (files: Map<string, GPXFile>) => void) {
         const [newFileCollection, patch, inversePatch] = produceWithPatches(this._files, callback);
 
-        this.storePatches(patch, inversePatch);
-
-        return this.commitFileStateChange(newFileCollection, patch);
+        return this.commitFileStateChange(newFileCollection, patch).then(saved => {
+            if (saved) return this.storePatches(patch, inversePatch);
+        });
     }
 
     applyToFiles(fileIds: string[], callback: (file: WritableDraft<GPXFile>) => void) {
@@ -185,9 +187,9 @@ export class FileActionManager {
             }
         );
 
-        this.storePatches(patch, inversePatch);
-
-        return this.commitFileStateChange(newFileCollection, patch);
+        return this.commitFileStateChange(newFileCollection, patch).then(saved => {
+            if (saved) return this.storePatches(patch, inversePatch);
+        });
     }
 
     applyToFile(fileId: string, callback: (file: WritableDraft<GPXFile>) => void) {
@@ -213,9 +215,9 @@ export class FileActionManager {
             }
         );
 
-        this.storePatches(patch, inversePatch);
-
-        return this.commitFileStateChange(newFileCollection, patch);
+        return this.commitFileStateChange(newFileCollection, patch).then(saved => {
+            if (saved) return this.storePatches(patch, inversePatch);
+        });
     }
 
     async storePatches(patch: Patch[], inversePatch: Patch[]) {
@@ -226,7 +228,7 @@ export class FileActionManager {
                 .belowOrEqual(get(this._patchMaxIndex) - MAX_PATCHES)
                 .delete();
         }
-        this._db.transaction('rw', this._db.patches, this._db.settings, async () => {
+        return this._db.transaction('rw', this._db.patches, this._db.settings, async () => {
             let index = get(this._patchIndex) + 1;
             await this._db.patches.put(
                 {

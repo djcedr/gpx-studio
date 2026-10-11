@@ -21,6 +21,11 @@
     import { db } from '$lib/db';
     import { fileStateCollection } from '$lib/logic/file-state';
 
+    import { refreshServer, startServerSync, syncBusy, syncError } from '$lib/logic/server-sync';
+    import { boundsManager } from '$lib/logic/bounds';
+    import { selection } from '$lib/logic/selection';
+    let stopSync = () => {};
+
     const {
         treeFileView,
         elevationProfile,
@@ -36,8 +41,15 @@
     );
 
     onMount(async () => {
+        await refreshServer();
+        stopSync = startServerSync();
+        const storedIds = await db.fileids.toArray();
         settings.connectToDatabase(db);
         fileStateCollection.connectToDatabase(db).then(() => {
+            const trace = page.url.searchParams.get('trace');
+            const selected = trace ?? storedIds[0];
+            if (selected) selection.selectFileWhenLoaded(selected);
+            boundsManager.fitBoundsOnLoad(trace ? [trace] : storedIds);
             let files: string[] = JSON.parse(page.url.searchParams.get('files') || '[]');
             let ids: string[] = JSON.parse(page.url.searchParams.get('ids') || '[]');
             let urls: string[] = files.concat(ids.map(getURLForGoogleDriveFile));
@@ -60,6 +72,7 @@
     });
 
     onDestroy(() => {
+        stopSync();
         settings.disconnectFromDatabase();
         fileStateCollection.disconnectFromDatabase();
     });
@@ -102,6 +115,8 @@
     </h2>
 </div>
 
+{#if $syncError}<div role="alert" class="fixed top-12 left-2 right-2 z-[100] bg-red-100 text-red-900 p-2 rounded">{$syncError}</div>{/if}
+{#if $syncBusy}<div class="fixed inset-0 z-[99] cursor-wait" aria-label="Synchronisation" aria-busy="true"></div>{/if}
 <div class="fixed flex flex-row w-dvw h-dvh">
     <div class="flex flex-col grow h-full min-w-0">
         <div class="grow relative">
