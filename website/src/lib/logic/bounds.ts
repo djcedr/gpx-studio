@@ -54,10 +54,11 @@ export class BoundsManager {
         this._files.delete(fileId);
 
         const bounds = file.statistics.getStatisticsFor(new ListFileItem(fileId)).global.bounds;
-        if (!this.validBounds(bounds)) return;
-
-        this._bounds.extend(bounds.southWest);
-        this._bounds.extend(bounds.northEast);
+        if (this.validBounds(bounds)) {
+            this._bounds.extend(bounds.southWest);
+            this._bounds.extend(bounds.northEast);
+        }
+        file.wpt.forEach(point => this._bounds.extend(point.getCoordinates()));
 
         if (this._files.size === 0) {
             this.finalizeFitBounds();
@@ -65,17 +66,12 @@ export class BoundsManager {
     }
 
     finalizeFitBounds() {
-        if (
-            this._bounds.getSouth() >= this._bounds.getNorth() &&
-            this._bounds.getWest() >= this._bounds.getEast()
-        ) {
-            return;
-        }
+        if (this._bounds.isEmpty()) return;
 
         this._unsubscribes.push(
             map.subscribe((map_) => {
                 if (!map_) return;
-                map_.fitBounds(this._bounds, { padding: 80, linear: true, animate: false });
+                map_.fitBounds(this._bounds, { padding: 80, maxZoom: 16, linear: true, animate: false });
                 this.reset();
             })
         );
