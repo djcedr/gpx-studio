@@ -130,7 +130,7 @@ export class FileActionManager {
     }
 
     apply(patch: Patch[]) {
-        let newFiles = applyPatches(this._files, patch);
+        let newFiles = applyPatches(new Map(this._files), patch);
         return this.commitFileStateChange(newFiles, patch);
     }
 
@@ -180,8 +180,9 @@ export class FileActionManager {
         });
     }
 
+    // Immer may freeze its input on a no-op. Keep the live subscription index mutable.
     applyGlobal(callback: (files: Map<string, GPXFile>) => void) {
-        const [newFileCollection, patch, inversePatch] = produceWithPatches(this._files, callback);
+        const [newFileCollection, patch, inversePatch] = produceWithPatches(new Map(this._files), callback);
 
         return this.commitFileStateChange(newFileCollection, patch).then((saved) => {
             if (saved) return this.storePatches(patch, inversePatch);
@@ -190,7 +191,7 @@ export class FileActionManager {
 
     applyToFiles(fileIds: string[], callback: (file: WritableDraft<GPXFile>) => void) {
         const [newFileCollection, patch, inversePatch] = produceWithPatches(
-            this._files,
+            new Map(this._files),
             (draft) => {
                 fileIds.forEach((fileId) => {
                     let file = draft.get(fileId);
@@ -217,7 +218,7 @@ export class FileActionManager {
         context?: any
     ) {
         const [newFileCollection, patch, inversePatch] = produceWithPatches(
-            this._files,
+            new Map(this._files),
             (draft) => {
                 fileIds.forEach((fileId, index) => {
                     let file = draft.get(fileId);
