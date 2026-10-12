@@ -33,7 +33,7 @@
             ignError = failure.status === 403 ? 'Accès IGN expiré ou refusé.' : 'Fond IGN indisponible.';
         });
         instance.on('sourcedata', (event) => {
-            if (event.sourceId === 'ignFrScan25' && event.sourceDataType === 'content') ignError = '';
+            if (event.sourceId === 'ignFrScan25' && event.tile?.state === 'loaded') ignError = '';
         });
     });
 
