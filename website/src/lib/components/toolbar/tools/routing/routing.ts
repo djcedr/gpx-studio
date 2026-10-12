@@ -1,7 +1,6 @@
 import type { Coordinates } from 'gpx';
 import { TrackPoint, distance } from 'gpx';
 import { settings } from '$lib/logic/settings';
-import { getElevation } from '$lib/utils';
 import { get } from 'svelte/store';
 
 const { routing, routingProfile, privateRoads } = settings;
@@ -266,40 +265,7 @@ function getTags(message: string): { [key: string]: string } {
     return tags;
 }
 
+// Straight drawing must work without an elevation service or routing request.
 function getIntermediatePoints(points: Coordinates[]): Promise<TrackPoint[]> {
-    let route: TrackPoint[] = [];
-    let step = 0.05;
-
-    for (let i = 0; i < points.length - 1; i++) {
-        // Add intermediate points between each pair of points
-        let dist = distance(points[i], points[i + 1]) / 1000;
-        for (let d = 0; d < dist; d += step) {
-            let lat = points[i].lat + (d / dist) * (points[i + 1].lat - points[i].lat);
-            let lon = points[i].lon + (d / dist) * (points[i + 1].lon - points[i].lon);
-            route.push(
-                new TrackPoint({
-                    attributes: {
-                        lat: lat,
-                        lon: lon,
-                    },
-                })
-            );
-        }
-    }
-
-    route.push(
-        new TrackPoint({
-            attributes: {
-                lat: points[points.length - 1].lat,
-                lon: points[points.length - 1].lon,
-            },
-        })
-    );
-
-    return getElevation(route).then((elevations) => {
-        route.forEach((point, i) => {
-            point.ele = elevations[i];
-        });
-        return route;
-    });
+    return Promise.resolve(points.map(attributes => new TrackPoint({ attributes })));
 }

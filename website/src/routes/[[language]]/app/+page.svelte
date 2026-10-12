@@ -1,6 +1,7 @@
 <script lang="ts">
     import GPXLayers from '$lib/components/map/gpx-layer/GPXLayers.svelte';
     import ElevationProfile from '$lib/components/elevation-profile/ElevationProfile.svelte';
+    import RouteVariants from '$lib/components/RouteVariants.svelte';
     import FileList from '$lib/components/file-list/FileList.svelte';
     import GPXStatistics from '$lib/components/GPXStatistics.svelte';
     import Map from '$lib/components/map/Map.svelte';
@@ -139,6 +140,7 @@
             <StreetViewControl />
             <LayerControl />
             <GPXLayers />
+            <RouteVariants />
             <CoordinatesPopup />
             <Toaster richColors />
             {#if !$treeFileView}
