@@ -229,7 +229,7 @@ export const settings = {
         'celsius',
         getValueValidator<TemperatureUnits>(['celsius', 'fahrenheit'], 'celsius')
     ),
-    elevationProfile: new Setting<boolean>('elevationProfile', false),
+    elevationProfile: new Setting<boolean>('elevationProfile', true),
     additionalDatasets: new Setting<AdditionalDataset[]>(
         'additionalDatasets',
         [],
