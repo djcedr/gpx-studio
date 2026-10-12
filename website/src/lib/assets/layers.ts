@@ -936,7 +936,7 @@ export const overpassTree: LayerTreeType = {
 };
 
 // Default basemap used
-export const defaultBasemap = 'openStreetMap';
+export const defaultBasemap = 'ignFrScan25';
 
 // Default overlays used (none)
 export const defaultOverlays: LayerTreeType = {
