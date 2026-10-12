@@ -53,63 +53,14 @@ const mtbRatingToScale: { [key: string]: string } = {
     '7': '6',
 };
 
-const graphhopperBlockPrivateCustomModels: { [key: string]: any } = {
-    bike: {
-        priority: [
-            {
-                if: 'bike_road_access == PRIVATE',
-                multiply_by: '0.0',
-            },
-        ],
-    },
-    racingbike: {
-        priority: [
-            {
-                if: 'bike_road_access == PRIVATE',
-                multiply_by: '0.0',
-            },
-        ],
-    },
-    gravelbike: {
-        priority: [
-            {
-                if: 'bike_road_access == PRIVATE',
-                multiply_by: '0.0',
-            },
-        ],
-    },
-    mtb: {
-        priority: [
-            {
-                if: 'bike_road_access == PRIVATE',
-                multiply_by: '0.0',
-            },
-        ],
-    },
-    foot: {
-        priority: [
-            {
-                if: 'foot_road_access == PRIVATE',
-                multiply_by: '0.0',
-            },
-        ],
-    },
-    motorcycle: {
-        priority: [
-            {
-                if: 'road_access == PRIVATE',
-                multiply_by: '0.0',
-            },
-        ],
-    },
-};
 async function getGraphHopperRoute(
     points: Coordinates[],
     graphHopperProfile: string,
     privateRoads: boolean
 ): Promise<TrackPoint[]> {
-    let response = await fetch('https://graphhopper.gpx.studio/route', {
+    let response = await fetch('/api/gpx/routing', {
         method: 'POST',
+        signal: AbortSignal.timeout(35000),
         headers: {
             'Content-Type': 'application/json',
         },
@@ -119,28 +70,26 @@ async function getGraphHopperRoute(
             elevation: true,
             points_encoded: false,
             details: graphhopperDetails,
-            custom_model: privateRoads
-                ? {}
-                : graphhopperBlockPrivateCustomModels[graphHopperProfile] || {},
+            privateRoads,
         }),
     });
 
     if (!response.ok) {
         const error = await response.json();
-        if (error.message.includes('Cannot find point 0')) {
+        if (error.message?.includes('Cannot find point 0')) {
             throw new Error('toolbar.routing.error.from');
-        } else if (error.message.includes('Cannot find point 1')) {
+        } else if (error.message?.includes('Cannot find point 1')) {
             if (points.length == 3) {
                 throw new Error('toolbar.routing.error.via');
             } else {
                 throw new Error('toolbar.routing.error.to');
             }
-        } else if (error.hints[0].details.includes('PointDistanceExceededException')) {
+        } else if (error.hints?.[0]?.details?.includes('PointDistanceExceededException')) {
             throw new Error('toolbar.routing.error.distance');
-        } else if (error.hints[0].details.includes('ConnectionNotFoundException')) {
+        } else if (error.hints?.[0]?.details?.includes('ConnectionNotFoundException')) {
             throw new Error('toolbar.routing.error.connection');
         } else {
-            throw new Error(error.message);
+            throw new Error(error.message ?? 'Routage indisponible. Réessayez.');
         }
     }
 
