@@ -2,6 +2,7 @@ import type { Coordinates } from 'gpx';
 import { TrackPoint, distance } from 'gpx';
 import { settings } from '$lib/logic/settings';
 import { get } from 'svelte/store';
+import { withTerrainElevation } from '$lib/logic/terrain-elevation';
 
 const { routing, routingProfile, privateRoads } = settings;
 
@@ -214,7 +215,7 @@ function getTags(message: string): { [key: string]: string } {
     return tags;
 }
 
-// Straight drawing must work without an elevation service or routing request.
+// Sample the terrain along freehand lines without snapping them to paths.
 function getIntermediatePoints(points: Coordinates[]): Promise<TrackPoint[]> {
-    return Promise.resolve(points.map(attributes => new TrackPoint({ attributes })));
+    return withTerrainElevation(points.map(attributes => new TrackPoint({ attributes })));
 }

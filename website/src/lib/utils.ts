@@ -4,7 +4,7 @@ import { base } from '$app/paths';
 import { languages } from '$lib/languages';
 import { TrackPoint, Waypoint, type Coordinates, crossarcDistance, distance, GPXFile } from 'gpx';
 import { Map as MapLibreMap, LngLatBounds } from 'maplibre-gl';
-import { pointToTile, pointToTileFraction } from '@mapbox/tilebelt';
+import { terrainElevation } from '$lib/logic/terrain-elevation';
 import type { GPXStatisticsTree } from '$lib/logic/statistics-tree';
 import { ListTrackSegmentItem } from '$lib/components/file-list/file-list';
 
@@ -98,99 +98,8 @@ export function getClosestTrackSegments(
     return closest.indices;
 }
 
-export function getElevation(
-    points: (TrackPoint | Waypoint | Coordinates)[],
-    ELEVATION_ZOOM: number = 12,
-    tileSize = 512
-): Promise<number[]> {
-    let coordinates = points.map((point) =>
-        point instanceof TrackPoint || point instanceof Waypoint ? point.getCoordinates() : point
-    );
-    let bbox = new LngLatBounds();
-    coordinates.forEach((coord) => bbox.extend(coord));
-
-    let tiles = coordinates.map((coord) => pointToTile(coord.lon, coord.lat, ELEVATION_ZOOM));
-    let uniqueTiles = Array.from(new Set(tiles.map((tile) => tile.join(',')))).map((tile) =>
-        tile.split(',').map((x) => parseInt(x))
-    );
-    let images = new Map<string, ImageData>();
-
-    const getPixelFromImageData = (imageData: ImageData, x: number, y: number): number[] => {
-        const index = (y * imageData.width + x) * 4;
-        return [imageData.data[index], imageData.data[index + 1], imageData.data[index + 2]];
-    };
-
-    let promises = uniqueTiles.map((tile) =>
-        fetch(`https://tiles.gpx.studio/mapterhorn/${ELEVATION_ZOOM}/${tile[0]}/${tile[1]}.webp`, {
-            cache: 'force-cache',
-        })
-            .then((response) => response.blob())
-            .then(
-                (blob) =>
-                    new Promise<void>((resolve) => {
-                        const url = URL.createObjectURL(blob);
-                        const img = new Image();
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            canvas.width = img.width;
-                            canvas.height = img.height;
-                            const ctx = canvas.getContext('2d');
-                            if (ctx) {
-                                ctx.drawImage(img, 0, 0);
-                                const imageData = ctx.getImageData(0, 0, img.width, img.height);
-                                images.set(tile.join(','), imageData);
-                            }
-                            URL.revokeObjectURL(url);
-                            resolve();
-                        };
-                        img.onerror = () => {
-                            URL.revokeObjectURL(url);
-                            resolve();
-                        };
-                        img.src = url;
-                    })
-            )
-    );
-
-    return Promise.all(promises).then(() =>
-        coordinates.map((coord, index) => {
-            let tile = tiles[index];
-            let imageData = images.get(tile.join(','));
-
-            if (!imageData) {
-                return 0;
-            }
-
-            let tf = pointToTileFraction(coord.lon, coord.lat, ELEVATION_ZOOM);
-            let x = tileSize * (tf[0] - tile[0]);
-            let y = tileSize * (tf[1] - tile[1]);
-            let _x = Math.floor(x);
-            let _y = Math.floor(y);
-            let dx = x - _x;
-            let dy = y - _y;
-
-            const p00 = getPixelFromImageData(imageData, _x, _y);
-            const p01 = getPixelFromImageData(imageData, _x, _y + (_y + 1 == tileSize ? 0 : 1));
-            const p10 = getPixelFromImageData(imageData, _x + (_x + 1 == tileSize ? 0 : 1), _y);
-            const p11 = getPixelFromImageData(
-                imageData,
-                _x + (_x + 1 == tileSize ? 0 : 1),
-                _y + (_y + 1 == tileSize ? 0 : 1)
-            );
-
-            let ele00 = -32768 + p00[0] * 256 + p00[1] + p00[2] / 256;
-            let ele01 = -32768 + p01[0] * 256 + p01[1] + p01[2] / 256;
-            let ele10 = -32768 + p10[0] * 256 + p10[1] + p10[2] / 256;
-            let ele11 = -32768 + p11[0] * 256 + p11[1] + p11[2] / 256;
-
-            return (
-                ele00 * (1 - dx) * (1 - dy) +
-                ele01 * (1 - dx) * dy +
-                ele10 * dx * (1 - dy) +
-                ele11 * dx * dy
-            );
-        })
-    );
+export function getElevation(points: (TrackPoint | Waypoint | Coordinates)[]): Promise<number[]> {
+    return terrainElevation(points.map(point => point instanceof TrackPoint || point instanceof Waypoint ? point.getCoordinates() : point));
 }
 
 export function loadSVGIcon(map: MapLibreMap, id: string, svg: string, size: number = 100) {

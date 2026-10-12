@@ -15,7 +15,7 @@ import {
     ListTrackItem,
     ListTrackSegmentItem,
 } from '$lib/components/file-list/file-list';
-import { getClosestLinePoint, loadSVGIcon } from '$lib/utils';
+import { getClosestLinePoint, loadSVGIcon, getElevation } from '$lib/utils';
 import type { GPXFileWithStatistics } from '$lib/logic/statistics-tree';
 import { mapCursor, MapCursorState } from '$lib/logic/map-cursor';
 import { settings } from '$lib/logic/settings';
@@ -663,6 +663,8 @@ export class RoutingControls {
         }
 
         if (anchors.length <= 1) {
+            try { targetTrackPoints[0].ele = (await getElevation([targetTrackPoints[0]]))[0]; }
+            catch (e: any) { toast.error(e.message); return false; }
             // Only one anchor, update the point in the segment
             targetTrackPoints[0]._data.anchor = true;
             targetTrackPoints[0]._data.zoom = 0;
