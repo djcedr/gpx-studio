@@ -58,7 +58,7 @@ export class BoundsManager {
             this._bounds.extend(bounds.southWest);
             this._bounds.extend(bounds.northEast);
         }
-        file.wpt.forEach(point => this._bounds.extend(point.getCoordinates()));
+        file.file.wpt.forEach(point => this._bounds.extend(point.getCoordinates()));
 
         if (this._files.size === 0) {
             this.finalizeFitBounds();
