@@ -21,7 +21,8 @@ export class Database extends Dexie {
     >;
 
     constructor() {
-        super('Database', {
+        // Dexie broadcasts by database name: volatile stores must not invalidate other tabs.
+        super(`Database-${crypto.randomUUID()}`, {
             cache: 'immutable',
             indexedDB: new IDBFactory(),
             IDBKeyRange,
