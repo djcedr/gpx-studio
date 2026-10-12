@@ -78,7 +78,7 @@
 
 <div class={className}>
     {#if ignError && $currentBasemap === 'ignFrScan25'}
-        <div role="alert" class="absolute top-3 left-1/2 -translate-x-1/2 z-30 rounded bg-background text-foreground p-2 shadow-md text-sm">
+        <div role="alert" class="pointer-events-none absolute top-12 left-1/2 -translate-x-1/2 z-30 rounded bg-background text-foreground p-2 shadow-md text-sm">
             {ignError}
         </div>
     {/if}
