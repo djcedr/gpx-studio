@@ -3,6 +3,7 @@ import { GPXGlobalStatistics, GPXStatisticsGroup, type Coordinates } from 'gpx';
 import { fileStateCollection, GPXFileState } from '$lib/logic/file-state';
 import {
     ListFileItem,
+    ListTrackItem,
     ListWaypointItem,
     ListWaypointsItem,
 } from '$lib/components/file-list/file-list';
@@ -46,7 +47,14 @@ export class SelectedGPXStatistics {
                         !(item instanceof ListWaypointItem || item instanceof ListWaypointsItem) ||
                         first
                     ) {
-                        statistics.add(stats.getStatisticsFor(item));
+                        const file = fileStateCollection.getFile(fileId);
+                        if (item instanceof ListFileItem && file?.trk.some(track => track.desc?.startsWith('raquettes:'))) {
+                            file.trk.forEach((track, index) => {
+                                if (!track._data.hidden) statistics.add(stats.getStatisticsFor(new ListTrackItem(fileId, index)));
+                            });
+                        } else {
+                            statistics.add(stats.getStatisticsFor(item));
+                        }
                         first = false;
                     }
                 });
