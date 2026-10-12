@@ -303,6 +303,16 @@ export class GPXLayer {
                             'icon-anchor': 'bottom',
                             'icon-padding': 0,
                             'icon-allow-overlap': true,
+                            'text-field': ['get', 'name'],
+                            'text-size': 13,
+                            'text-anchor': 'top',
+                            'text-offset': [0, 0.25],
+                            'text-allow-overlap': true,
+                        },
+                        paint: {
+                            'text-color': this.layerColor,
+                            'text-halo-color': 'white',
+                            'text-halo-width': 2,
                         },
                     },
                     ANCHOR_LAYER_KEY.waypoints
@@ -772,6 +782,7 @@ export class GPXLayer {
                 properties: {
                     fileId: this.fileId,
                     waypointIndex: index,
+                    name: waypoint.name ?? '',
                     icon: `waypoint-${getSymbolKey(waypoint.sym) ?? 'default'}-${this.layerColor}`,
                 },
             });
