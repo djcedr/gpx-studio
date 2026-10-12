@@ -82,7 +82,7 @@ function removeColor(fileId: string, color: string) {
     });
 }
 
-export function getSvgForSymbol(symbol?: string | undefined, layerColor?: string | undefined) {
+export function getSvgForSymbol(symbol?: string | undefined, layerColor?: string | undefined, label = '') {
     let symbolSvg = symbol ? symbols[symbol]?.iconSvg : undefined;
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
     ${
@@ -109,6 +109,7 @@ export function getSvgForSymbol(symbol?: string | undefined, layerColor?: string
             .replace('stroke="currentColor"', 'stroke="white"')
             .replace('stroke-width="2"', 'stroke-width="2.5" x="7" y="5"') ?? ''
     }
+    ${label ? `<rect x="2" y="1" width="20" height="15" rx="3" fill="white" stroke="${layerColor ?? 'SteelBlue'}"/><text x="12" y="12" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold" font-size="${Math.min(10,32/label.length)}" fill="black">${label.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]!))}</text>` : ''}
     </svg>`;
 }
 
@@ -303,16 +304,6 @@ export class GPXLayer {
                             'icon-anchor': 'bottom',
                             'icon-padding': 0,
                             'icon-allow-overlap': true,
-                            'text-field': ['get', 'name'],
-                            'text-size': 13,
-                            'text-anchor': 'top',
-                            'text-offset': [0, 0.25],
-                            'text-allow-overlap': true,
-                        },
-                        paint: {
-                            'text-color': this.layerColor,
-                            'text-halo-color': 'white',
-                            'text-halo-width': 2,
                         },
                     },
                     ANCHOR_LAYER_KEY.waypoints
@@ -783,7 +774,7 @@ export class GPXLayer {
                     fileId: this.fileId,
                     waypointIndex: index,
                     name: waypoint.name ?? '',
-                    icon: `waypoint-${getSymbolKey(waypoint.sym) ?? 'default'}-${this.layerColor}`,
+                    icon: `waypoint-${getSymbolKey(waypoint.sym) ?? 'default'}-${this.layerColor}-${encodeURIComponent(waypoint.name ?? '')}`,
                 },
             });
         });
@@ -798,14 +789,11 @@ export class GPXLayer {
             return;
         }
 
-        let symbols = new Set<string | undefined>();
         file.wpt.forEach((waypoint) => {
-            symbols.add(getSymbolKey(waypoint.sym));
-        });
-
-        symbols.forEach((symbol) => {
-            const iconId = `waypoint-${symbol ?? 'default'}-${this.layerColor}`;
-            loadSVGIcon(_map, iconId, getSvgForSymbol(symbol, this.layerColor));
+            const symbol = getSymbolKey(waypoint.sym);
+            const label = waypoint.name ?? '';
+            const iconId = `waypoint-${symbol ?? 'default'}-${this.layerColor}-${encodeURIComponent(label)}`;
+            loadSVGIcon(_map, iconId, getSvgForSymbol(symbol, this.layerColor, label));
         });
     }
 }
