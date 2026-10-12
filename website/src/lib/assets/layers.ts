@@ -221,7 +221,7 @@ export const basemaps: { [key: string]: string | StyleSpecification } = {
             ignFrScan25: {
                 type: 'raster',
                 tiles: [
-                    'https://data.geopf.fr/private/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&TILEMATRIXSET=PM&TILEMATRIX={z}&TILECOL={x}&TILEROW={y}&LAYER=GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN25TOUR&FORMAT=image/jpeg&STYLE=normal&apikey=ign_scan_ws',
+                    '/api/maps/ign/{z}/{x}/{y}',
                 ],
                 tileSize: 256,
                 maxzoom: 16,
@@ -1049,7 +1049,7 @@ export const defaultBasemapTree: LayerTreeType = {
             france: {
                 ignFrPlan: false,
                 ignFrTopo: false,
-                ignFrScan25: false,
+                ignFrScan25: true,
                 ignFrSatellite: false,
             },
             new_zealand: {

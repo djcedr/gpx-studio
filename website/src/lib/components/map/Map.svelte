@@ -3,6 +3,8 @@
     import { Button } from '$lib/components/ui/button';
     import { i18n } from '$lib/i18n.svelte';
     import { page } from '$app/state';
+    import { settings } from '$lib/logic/settings';
+    const { currentBasemap } = settings;
     import { map } from '$lib/components/map/map';
     import { PUBLIC_MAPTILER_KEY } from '$env/static/public';
 
@@ -22,6 +24,18 @@
 
     let webgl2Supported = $state(true);
     let embeddedApp = $state(false);
+    let ignError = $state('');
+    const unsubscribeIgn = map.subscribe((instance) => {
+        if (!instance) return;
+        instance.on('error', (event) => {
+            const failure = event.error as Error & { url?: string; status?: number };
+            if (!failure.url?.includes('/api/maps/ign/')) return;
+            ignError = failure.status === 403 ? 'Accès IGN expiré ou refusé.' : 'Fond IGN indisponible.';
+        });
+        instance.on('sourcedata', (event) => {
+            if (event.sourceId === 'ignFrScan25' && event.sourceDataType === 'content') ignError = '';
+        });
+    });
 
     onMount(() => {
         let gl = document.createElement('canvas').getContext('webgl2');
@@ -57,11 +71,17 @@
     });
 
     onDestroy(() => {
+        unsubscribeIgn();
         map.destroy();
     });
 </script>
 
 <div class={className}>
+    {#if ignError && $currentBasemap === 'ignFrScan25'}
+        <div role="alert" class="absolute top-3 left-1/2 -translate-x-1/2 z-30 rounded bg-background text-foreground p-2 shadow-md text-sm">
+            {ignError}
+        </div>
+    {/if}
     <div id="map" class="h-full {webgl2Supported && !embeddedApp ? '' : 'hidden'}"></div>
     <div
         class="flex flex-col items-center justify-center gap-3 h-full {webgl2Supported &&
