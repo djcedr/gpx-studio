@@ -7,12 +7,22 @@ let versions = new Map<string, number>();
 const tombstones = new Map<string, number>();
 let refreshing = false;
 let initialized = false;
+// The server list's ETag, kept only while `versions` and the editor database match it.
+let validator: string | null = null;
 
 async function snapshot(force = false) {
+    // Recovery never trusts a validator: it always reloads the full server state.
+    const sent = !force && initialized ? validator : null;
     const response = await fetch('/api/gpx', {
         cache: 'no-store',
+        headers: sent ? { 'If-None-Match': sent } : {},
         signal: AbortSignal.timeout(15000),
     });
+    if (response.status === 304) {
+        if (sent && response.headers.get('ETag') === sent) return;
+        validator = null;
+        throw new Error('Serveur indisponible.');
+    }
     if (!response.ok) throw new Error('Serveur indisponible.');
     // JSON transport turns GPX Date fields into strings; the editor expects Dates.
     const { files } = JSON.parse(await response.text(), (key, value) => {
@@ -26,7 +36,11 @@ async function snapshot(force = false) {
         !initialized ||
         files.length !== versions.size ||
         files.some((f: any) => versions.get(f.id) !== f.version);
-    if (!changed) return;
+    if (!changed) {
+        validator = response.headers.get('ETag');
+        return;
+    }
+    validator = null;
     // Dexie key-path inference recurses through GPXTreeNode.children.
     // @ts-ignore
     await db.transaction('rw', db.files, db.fileids, db.patches, db.settings, async () => {
@@ -42,6 +56,7 @@ async function snapshot(force = false) {
     });
     versions = new Map(files.map((f: any) => [f.id, f.version]));
     initialized = true;
+    validator = response.headers.get('ETag');
 }
 export async function refreshServer() {
     if (get(syncBusy) || refreshing) return;
@@ -78,6 +93,8 @@ export async function saveServer(
             ...deleted.map((id) => ({ id, version: expected.get(id) ?? null, file: null })),
         ];
         if (!changes.length) return true;
+        // Saved versions change the list; the next poll fetches its new validator.
+        validator = null;
         const response = await fetch('/api/gpx', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -109,6 +126,7 @@ export async function saveServer(
             await snapshot(true);
         } catch {
             initialized = false;
+            validator = null;
         }
         syncError.set(message);
         return false;
