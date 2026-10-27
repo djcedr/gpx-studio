@@ -29,7 +29,7 @@ import {
     Anchor,
     Toilet,
     X,
-    type IconProps,
+    type LucideProps,
 } from '@lucide/svelte';
 import {
     Landmark as LandmarkSvg,
@@ -67,7 +67,7 @@ import type { Component } from 'svelte';
 
 export type Symbol = {
     value: string;
-    icon?: Component<IconProps>;
+    icon?: Component<LucideProps>;
     iconSvg?: string;
 };
 

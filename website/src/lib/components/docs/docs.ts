@@ -12,7 +12,7 @@ import {
     Funnel,
     SquareDashedMousePointer,
     MountainSnow,
-    type IconProps,
+    type LucideProps,
 } from '@lucide/svelte';
 import type { Component } from 'svelte';
 
@@ -37,7 +37,7 @@ export const guides: Record<string, string[]> = {
     faq: [],
 };
 
-export const guideIcons: Record<string, string | Component<IconProps>> = {
+export const guideIcons: Record<string, string | Component<LucideProps>> = {
     'getting-started': '🚀',
     menu: '📂 ⚙️',
     file: File,
